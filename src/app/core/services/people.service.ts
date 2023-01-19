@@ -1,5 +1,6 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Attribute, Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { environment } from 'src/environments/environment';
 import { Person } from '../models/person.model';
 import { ApiService } from './api.service';
 import { HttpClientProvider } from './http-client.provider';
@@ -9,29 +10,7 @@ import { HttpClientProvider } from './http-client.provider';
 })
 export class PeopleService{
 
-  private _people:Person[] = [
-    {
-      id:1,
-      name:"Juan",
-      surname:"García",
-      nickname:"Juanarrow",
-      picture:"https://drive.google.com/uc?export=view&id=1_OaTxoyCng4aiMtAiABtWED_S885gdwn"
-    },
-    {
-      id:2,
-      name:"Pedro",
-      surname:"Cueto",
-      nickname:"Pedrin",
-      picture:"https://drive.google.com/uc?export=view&id=1pWGvaEQiUEXgwWnR12KCKK1qDq1bqp1J"
-    },
-    {
-      id:3,
-      name:"Sara",
-      surname:"Gutiérrez",
-      nickname:"Sarita",
-      picture:"https://drive.google.com/uc?export=view&id=1XmVmg5bgImIsS83LNtFhunvpBbBD09OU"
-    }
-  ];
+  private _people:Person[] = [];
 
   private _peopleSubject:BehaviorSubject<Person[]> = new BehaviorSubject(this._people);
   public _people$ = this._peopleSubject.asObservable();
@@ -44,12 +23,19 @@ export class PeopleService{
   }
   
   async init(){
-    this.api.get('/api/tasks').subscribe({
+    this.api.get('/api/people?populate=picture').subscribe({
       next:data=>{
         console.log(data);
+        this._people = (data.data as Array<any>).map<Person>(person=>{
+          return {id:person.id,
+                    name:person.attributes.name,
+                    surname:person.attributes.surname,
+                    nickname:person.attributes.nickname,
+                    picture:environment.api_url+person.attributes.picture.data.attributes.formats.thumbnail.url};
+        });
+        this._peopleSubject.next(this._people);
       },
       error:err=>{
-
       }
     });
   }
@@ -59,7 +45,7 @@ export class PeopleService{
 
   }
 
-  getPersonById(id:number){
+  getPersonById(id:number) {
     return this._people.find(p=>p.id==id);
   }
 

@@ -1,35 +1,42 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Task } from 'src/app/core/models/task.model';
+import { environment } from 'src/environments/environment';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TasksService {
 
-  private _tasks:Task[] = [
-    {
-      id:1,
-      name:"Task1",
-      durationInSecs:3600,
-      picture:"https://drive.google.com/uc?export=view&id=14HXI_T6WnRaJCkhKxKcAtJsovFzoHAl4"
-    },
-    {
-      id:2,
-      name:"Task2",
-      durationInSecs:5400,
-      picture:"https://drive.google.com/uc?export=view&id=1GMQKvk0rm6_1nL9W3zcAyUK3tsMcB9oo"
-    }
-  ];
+  private _tasks:Task[] = [];
 
   private _tasksSubject:BehaviorSubject<Task[]> = new BehaviorSubject(this._tasks);
   public taks$ = this._tasksSubject.asObservable();
 
-  
-
   id:number = this._tasks.length+1;
-  constructor() {
+  constructor(
+    public api:ApiService
+  ) {
+    this.init();
+  }
 
+  async init(){
+    this.api.get('/api/tasks?populate=picture').subscribe({
+      next:data=>{
+        console.log(data);
+        this._tasks = (data.data as Array<any>).map<Task>(task=>{
+          return {id:task.id,
+                    name: task.attributes.name,
+                    durationInSecs:task.attributes.durationInSecs,
+                    picture:environment.api_url+task.attributes.picture.data.attributes.formats.thumbnail.url};
+        });
+        this._tasksSubject.next(this._tasks);
+      },
+      error:err=>{
+        console.log(err)
+      }
+    });
   }
 
   getTasks(){
